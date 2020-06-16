@@ -10,7 +10,7 @@
     
     <groupId>es.apba.infra.esb.support</groupId>
     <artifactId>apba-support-camel</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>es.apba.infra.esb.support:apba-support-camel</name>
@@ -38,7 +38,7 @@
         <connection>scm:git:https://github.com/adtapba/apba-support-camel.git</connection>
         <developerConnection>scm:git:https://github.com/adtapba/apba-support-camel.git</developerConnection>
         <url>https://github.com/adtapba/apba-support-camel</url>
-      <tag>apba-support-camel-1.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
     
     <distributionManagement>
