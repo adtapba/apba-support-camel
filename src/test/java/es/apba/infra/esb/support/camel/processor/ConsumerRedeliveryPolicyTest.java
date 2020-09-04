@@ -38,12 +38,12 @@ public class ConsumerRedeliveryPolicyTest {
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException(); 
         Exchange exchange = getExchangeWithAConnectException();
         when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(null);  
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(null);
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(null);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true)); 
         verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 1);  
-        verify(exchange, times(1)).setProperty("lastException", CONNECT_EXCEPTION);
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", true);
     }
     
     @Test
@@ -51,13 +51,13 @@ public class ConsumerRedeliveryPolicyTest {
         ConsumerRedeliveryPolicy instance = 
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException(); 
         Exchange exchange = getExchangeWithOtherException();
-        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(null);  
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(null);
+        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(null); 
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(null);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true)); 
         verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 1);  
-        verify(exchange, times(1)).setProperty("lastException", OTHER_EXCEPTION);
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", false);
     }
     
     @Test
@@ -66,12 +66,12 @@ public class ConsumerRedeliveryPolicyTest {
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException(); 
         Exchange exchange = getExchangeWithAConnectException();
         when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(9);  
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(CONNECT_EXCEPTION);
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(true);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true));
         verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 10);  
-        verify(exchange, times(1)).setProperty("lastException", CONNECT_EXCEPTION);
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", true);
     }
     
     @Test
@@ -79,8 +79,8 @@ public class ConsumerRedeliveryPolicyTest {
         ConsumerRedeliveryPolicy instance = 
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException();
         Exchange exchange = getExchangeWithAConnectException();
-        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(10);  
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(new ConnectException());
+        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(10);
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(true);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(false));
@@ -93,12 +93,12 @@ public class ConsumerRedeliveryPolicyTest {
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException(); 
         Exchange exchange = getExchangeWithOtherException();
         when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(1);  
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(OTHER_EXCEPTION);
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(false);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true));
         verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 2);  
-        verify(exchange, times(1)).setProperty("lastException", OTHER_EXCEPTION);
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", false);
     }
     
     @Test
@@ -107,7 +107,7 @@ public class ConsumerRedeliveryPolicyTest {
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException();   
         Exchange exchange = getExchangeWithOtherException();
         when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(2);  
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(OTHER_EXCEPTION);
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(false);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(false));
@@ -118,13 +118,13 @@ public class ConsumerRedeliveryPolicyTest {
         ConsumerRedeliveryPolicy instance = 
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException();  
         Exchange exchange = getExchangeWithOtherException();
-        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(10);     
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(new ConnectException());
+        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(10);   
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(true);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true));  
         verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 1);  
-        verify(exchange, times(1)).setProperty("lastException", OTHER_EXCEPTION);
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", false);
     }
     
     @Test
@@ -132,13 +132,13 @@ public class ConsumerRedeliveryPolicyTest {
         ConsumerRedeliveryPolicy instance = 
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException();  
         Exchange exchange = getExchangeWithOtherException();
-        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(1);     
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(OTHER_EXCEPTION);
+        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(1); 
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(false);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true));        
         verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 2);  
-        verify(exchange, times(1)).setProperty("lastException", OTHER_EXCEPTION);
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", false);
     }
     
     @Test
@@ -146,8 +146,8 @@ public class ConsumerRedeliveryPolicyTest {
         ConsumerRedeliveryPolicy instance = 
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException();   
         Exchange exchange = getExchangeWithOtherException();
-        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(2);     
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(OTHER_EXCEPTION);
+        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(2);  
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(false);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(false));        
@@ -158,13 +158,13 @@ public class ConsumerRedeliveryPolicyTest {
         ConsumerRedeliveryPolicy instance = 
                 getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException();    
         Exchange exchange = getExchangeWithAConnectException();
-        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(2);     
-        when(exchange.getProperty("lastException", Exception.class)).thenReturn(OTHER_EXCEPTION);
+        when(exchange.getProperty("consumerRedeliveryCounter", Integer.class)).thenReturn(2); 
+        when(exchange.getProperty("lastExceptionWasConnectException", Boolean.class)).thenReturn(false);
         
         assertThat(instance.shouldRedeliver(exchange, REGULAR_MAXIMUM_REDELIVERIES_HAS_NO_EFFECT, null)
                 , is(true));        
-        verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 3);  
-        verify(exchange, times(1)).setProperty("lastException", CONNECT_EXCEPTION);
+        verify(exchange, times(1)).setProperty("consumerRedeliveryCounter", 3); 
+        verify(exchange, times(1)).setProperty("lastExceptionWasConnectException", true);
     }
     
     ConsumerRedeliveryPolicy getInstance_TenMaximumRedeliveriesForConnectException_TwoMaximumRedeliveriesForOtherException() {

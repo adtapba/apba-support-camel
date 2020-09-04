@@ -9,100 +9,130 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Custom redelivery policy for APBA consumers
- * 
+ *
  * @author fsaucedo
  */
 public class ConsumerRedeliveryPolicy extends RedeliveryPolicy {
-    
+
     private static final long serialVersionUID = 2373209455431813365L;
-    
+
     private final Logger LOG = LoggerFactory.getLogger(ConsumerRedeliveryPolicy.class);
-    
-    private final int connectExceptionMaximumRedeliveries;    
-    private final int otherExceptionMaximumRedeliveries;    
-    
+
+    private final int connectExceptionMaximumRedeliveries;
+    private final int otherExceptionMaximumRedeliveries;
+
     /**
      * Parametrized constructor
-     * 
+     *
      * @param connectExceptionMaximumRedeliveries Maximum redeliveries for java.net.ConnectException
      * @param otherExceptionMaximumRedeliveries Maximum redeliveries for other exceptions
      * @param onExceptionRedeliveryDelay Redelivery delay
      */
-    public ConsumerRedeliveryPolicy(int connectExceptionMaximumRedeliveries, 
-            int otherExceptionMaximumRedeliveries, 
+    public ConsumerRedeliveryPolicy(int connectExceptionMaximumRedeliveries,
+            int otherExceptionMaximumRedeliveries,
             long onExceptionRedeliveryDelay) {
         super();
-        
+
         this.connectExceptionMaximumRedeliveries = connectExceptionMaximumRedeliveries;
         this.otherExceptionMaximumRedeliveries = otherExceptionMaximumRedeliveries;
-        
+
         setMaximumRedeliveries(connectExceptionMaximumRedeliveries);
         setRedeliveryDelay(onExceptionRedeliveryDelay);
     }
-        
+
     /**
      * Custom implementation for APBA consumers with diferent number of redeliveries 
      * depending on the exception
-     * 
-     * @param exchange  Camel exception
+     *
+     * @param exchange Camel exception
      * @param redeliveryCounter Not used for this implementation
      * @param retryWhile Not used for this implementation
      * @return Decision on the delivery of one message
      */
     @Override
     public boolean shouldRedeliver(Exchange exchange, int redeliveryCounter, Predicate retryWhile) {
-        Exception ex = exchange.getException();       
-        
+        Exception ex = exchange.getException();
+
         if (ex == null) {
             throw new UnsupportedOperationException("This redelivery policy must be used within an exception control clause");
         } else {
-            Exception lastException = getLastExceptionProperty(exchange);
-            int consumerRedeliveryCounter = getConsumerRedeliveryCounterProperty(exchange);
             boolean result;
-            
-            if (ex instanceof ConnectException) {
-                result = consumerRedeliveryCounter < connectExceptionMaximumRedeliveries;                              
+            boolean lastExceptionWasConnectException = getLastExceptionWasConnectExceptionProperty(exchange);
+            int consumerRedeliveryCounter = getConsumerRedeliveryCounterProperty(exchange);
+
+            boolean redeliveryCausedByConnectException = isCausedByConnectException(ex);
+
+            if (redeliveryCausedByConnectException) {
+                result = consumerRedeliveryCounter < connectExceptionMaximumRedeliveries;
             } else {
-                if (lastException != null && lastException instanceof ConnectException) {
-                    consumerRedeliveryCounter = 0;  
-                    
+                if (lastExceptionWasConnectException) {
+                    consumerRedeliveryCounter = 0;
+
                     logConsumerRedeliveryCounterReset(exchange, consumerRedeliveryCounter);
                 }
-                
+
                 result = consumerRedeliveryCounter < otherExceptionMaximumRedeliveries;
             }
-            
+
             logRedelivery(exchange, consumerRedeliveryCounter);
-            
+            logExceptionDetails(exchange, redeliveryCausedByConnectException);
+
             setConsumerRedeliveryCounterProperty(exchange, ++consumerRedeliveryCounter);
-            setLastExceptionProperty(exchange, ex);
-            
+            setLastExceptionWasConnectExceptionProperty(exchange, redeliveryCausedByConnectException);
+
             return result;
         }
-    }   
-    
+    }
+
+    /**
+     * Look for a Connect Exception in the stack trace
+     *
+     * @param ex Exception
+     * @return If there is a Connect Exception in the stack trace
+     */
+    private boolean isCausedByConnectException(Exception ex) {
+        if (ex instanceof ConnectException) {
+            return true;
+        } else {
+            for (Throwable t = ex.getCause(); t != null; t = t.getCause()) {
+                if (t instanceof ConnectException) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Log a redelivery
-     * 
+     *
      * @param exchange Camel exchange
      * @param redeliveryCounter Redelivery counter
      */
     void logRedelivery(Exchange exchange, int redeliveryCounter) {
-        logWarning(exchange, "Retry", redeliveryCounter);
+        logRedeliveryWarning(exchange, "Retry", redeliveryCounter);
     }
 
     /**
      * Log a reset on a consumer redelivery counter
-     * 
+     *
      * @param exchange Camel exchange
      * @param redeliveryCounter Redelivery counter
      */
     void logConsumerRedeliveryCounterReset(Exchange exchange, int consumerRedeliveryCounter) {
-        logWarning(exchange, "Consumer redelivery counter reset", consumerRedeliveryCounter);
+        logRedeliveryWarning(exchange, "Consumer redelivery counter reset", consumerRedeliveryCounter);
     }
-    
-    void logWarning(Exchange exchange, String operation, int redeliveryCounter) {
-        LOG.warn("{} - {} - {} | {} | PROCESS | apbaTransactionId: {} | counter: {}", 
+
+    /**
+     * Log a redelivery warning message
+     *
+     * @param exchange Camel exchange
+     * @param operation Operation
+     * @param redeliveryCounter Redelivery counter
+     */
+    void logRedeliveryWarning(Exchange exchange, String operation, int redeliveryCounter) {
+        LOG.warn("{} - {} - {} | {} | PROCESS | apbaTransactionId: {} | counter: {}",
                 exchange.getContext().getName(),
                 exchange.getFromRouteId(),
                 exchange.getExchangeId(),
@@ -110,22 +140,39 @@ public class ConsumerRedeliveryPolicy extends RedeliveryPolicy {
                 exchange.getIn().getHeader("apbaTransactionId"),
                 redeliveryCounter);
     }
+    
+    /**
+     * Log the exception details
+     * 
+     * @param exchange Camel exchange
+     * @param redeliveryCausedByConnectException If true log a standard message
+     */
+    void logExceptionDetails(Exchange exchange, boolean redeliveryCausedByConnectException) {
+        LOG.warn("{} - {} - {} | {} | PROCESS | apbaTransactionId: {} | name: {} | message: {}",
+                exchange.getContext().getName(),
+                exchange.getFromRouteId(),
+                exchange.getExchangeId(),
+                "Exception details",
+                exchange.getIn().getHeader("apbaTransactionId"),
+                redeliveryCausedByConnectException ? ConnectException.class.getName() : exchange.getException().getClass().getName(),
+                redeliveryCausedByConnectException ? "Exception on connecting to the target" : exchange.getException().getMessage());
+    }
 
     /**
      * Getter for consumer redelivery counter property
-     * 
+     *
      * @param exchange Camel exchange
      * @return Consumer redelivery counter value
      */
     int getConsumerRedeliveryCounterProperty(Exchange exchange) {
         Integer consumerRedeliveryCounter = exchange.getProperty("consumerRedeliveryCounter", Integer.class);
-        
-        return consumerRedeliveryCounter == null ? 0 : consumerRedeliveryCounter;                        
+
+        return consumerRedeliveryCounter == null ? 0 : consumerRedeliveryCounter;
     }
-    
+
     /**
      * Setter for consumer redelivery counter property
-     * 
+     *
      * @param exchange Camel exchange
      * @param consumerRedeliveryCounter Consumer redelivery counter value
      */
@@ -134,23 +181,26 @@ public class ConsumerRedeliveryPolicy extends RedeliveryPolicy {
     }
 
     /**
-     * Getter for last exception property
-     * 
-     * @param exchange Camel exchange
-     * @return Last exception value
+     * Getter for lastExceptionWasConnectException property
+     *
+     * @param Camel exchange
+     * @return LastExceptionWasConnectException exchange property
      */
-    Exception getLastExceptionProperty(Exchange exchange) {
-        return exchange.getProperty("lastException", Exception.class);
+    private boolean getLastExceptionWasConnectExceptionProperty(Exchange exchange) {
+        Boolean lastExceptionWasConnectException = exchange.getProperty("lastExceptionWasConnectException", Boolean.class);
+
+        return lastExceptionWasConnectException == null ? false : lastExceptionWasConnectException;
     }
 
     /**
-     * Setter for last exception property
-     * 
+     * Setter for lastExceptionWasConnectException property
+     *
      * @param exchange Camel exchange
-     * @param lastException Last exception value 
+     * @param lastExceptionWasConnectException LastExceptionWasConnectException
+     * exchange property
      */
-    void setLastExceptionProperty(Exchange exchange, Exception lastException) {
-        exchange.setProperty("lastException", lastException);
+    private void setLastExceptionWasConnectExceptionProperty(Exchange exchange, boolean lastExceptionWasConnectException) {
+        exchange.setProperty("lastExceptionWasConnectException", lastExceptionWasConnectException);
     }
-        
+
 }
